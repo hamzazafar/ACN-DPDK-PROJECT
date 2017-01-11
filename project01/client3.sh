@@ -1,7 +1,7 @@
 #!/bin/bash
 
 IP="172.16.0.2"
-CIDR="172.16.0.2/24"
+CIDR=( "172.16.0.2/24" "10.0.0.2/24" "192.168.0.2/24")
 NETWORK="172.16.0.0/24"
 DEFAULT_GATEWAY="172.16.0.1"                                                      
 DEV="eth1"                                                                      
@@ -11,12 +11,18 @@ ROUTING_TABLE_NAME="table_eth1"
 function flush() {
 
 if [ -z $1 ]; then
-    	echo "Please specify the device name for flushing"
+	echo "Please specify the device name for flushing"
 else
     	echo "Settings flushed for device : $1"
     	ip addr flush dev $1
     	echo "Setting $1 state to down"
     	ip link set dev $1 down
+	#remove rules
+	for i in ${CIDR[@]}
+	do
+		ip rule delete from ${i}
+		ip rule delete to ${i}
+	done
 fi
 }
 
@@ -53,18 +59,20 @@ fi
 
 ip rule list | grep $ROUTING_TABLE_NAME
 if [ $? -ne 0 ]; then                                                           
-	#Add rules for routing table selection
-	ip rule add from $CIDR table $ROUTING_TABLE_NAME
-	if [ $? -ne 0 ]; then
-		flush $DEV                                                              
-		exit 1                                                                  
-	fi
+	for i in ${CIDR[@]}
+	do
+		ip rule add from ${i} table $ROUTING_TABLE_NAME
+		if [ $? -ne 0 ]; then
+			flush $DEV
+			exit 1
+		fi
 
-	ip rule add to $CIDR table $ROUTING_TABLE_NAME
-	if [ $? -ne 0 ]; then                                                           
-		flush $DEV                                                              
-		exit 1                                                                  
-	fi
+		ip rule add to ${i} table $ROUTING_TABLE_NAME
+		if [ $? -ne 0 ]; then
+			flush $DEV
+			exit 1
+		fi
+	done
 fi
 
 #Set routes in new routing table
