@@ -28,9 +28,9 @@ fi
 
 
 # Add IP Address to Interface
-ip a add $CIDR dev $DEV
+ip a add ${CIDR[0]} dev $DEV
 if [ $? -eq 0 ]; then
-	echo "Successfully added IP Address: $CIDR"
+	echo "Successfully added IP Address: ${CIDR[0]}"
 else
 	flush $DEV
 	exit 1
